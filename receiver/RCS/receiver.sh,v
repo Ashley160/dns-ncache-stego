@@ -1,0 +1,46 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	2025.05.12.11.21.50;	author ashley;	state Exp;
+branches;
+next	;
+
+
+desc
+@最原始大三寫的 receiver.sh
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@#!/bin/bash
+# Program:
+# 	Receive Secret Message
+# History:
+# 	2023031500 Ashley
+
+declare -i i=0
+declare -i j=0 
+uuid=`uuidgen`
+ttl=`dig $uuid$1 $2 | grep SOA | awk '{print $2}'`
+
+while [[ j -lt 8 ]]
+do
+	test=`dig $i$1 $2 | grep SOA | awk '{print $2}'`
+	if [ $test -eq $ttl ]; then
+		(( j++ ))
+	else
+		j=0
+		echo $i$1 >> r_domain.txt
+	fi
+	(( i++ ))
+done
+@
