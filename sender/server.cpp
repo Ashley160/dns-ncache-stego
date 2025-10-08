@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <unordered_map>
+#include <cstdint>
 #include "../common/extension_map.h"
 using namespace std;
 
@@ -14,46 +15,41 @@ using namespace std;
 #define DEBUG_COUT(x) do {} while(0)
 #endif
 
-
-int main(int argc, char** argv){
-    // Check command line arguments
-    if (argc != 3) {
-        cerr << "Usage: " << argv[0] << " <filename> <nxdomain>" << endl;
-        return 1;
-    }
-
-	const string filename = argv[1];
-	char* nxdomain = argv[2];
-
+bool embed_message(const string filename, char* nxdomain){
+    // Read input file 
 	ifstream input_file(filename, ios::binary);
-	ofstream out("s_domain.txt");
 	
+    // Check if file opened successfully, if not, print error message and return 1
     if (!input_file.is_open()) {
         cerr << "Unable to open " << filename << endl;
-        return 1;
+        return false;
     }
 
+    // Get file size
     input_file.seekg(0, input_file.end);
     size_t size = input_file.tellg();
     input_file.seekg(0, input_file.beg);
 
+    // Initialize type(8-bit) and length(24-bit)
     uint8_t type[1] = {0};
     uint8_t length[3] = {0};
 
-#ifdef DEBUG
+#ifdef DEBUG    // Show default type and length
     cout << "Default Type: " << bitset<8>(type[0]) << endl;
     cout << "Default Length: " << bitset<8>(length[0]) << " " 
                                << bitset<8>(length[1]) << " " 
                                << bitset<8>(length[2]) << endl;
 #endif
-    
+
+    // Get type, using extension_map.h function "getTypeValue"
     type[0] = getTypeValue(filename);
-    
+
+    // Get length (file size)
     length[0] = (size >> 16) & 0xFF;
     length[1] = (size >> 8)  & 0xFF;
     length[2] = size & 0xFF;
 
-#ifdef DEBUG
+#ifdef DEBUG   // Show type and length after setting
     cout << "After Type: " << bitset<8>(type[0]) << endl;
     cout << "File size is: " << size << " bytes\n";
     cout << "File size is (hex): " << hex <<  size << dec << " bytes\n";
@@ -62,10 +58,13 @@ int main(int argc, char** argv){
                              << bitset<8>(length[2]) << endl;
 #endif
 
+    // Initialize value and read from input file
     char* value = new char[size];
     input_file.read(value, size); 
     input_file.close();
-    
+	
+    // Initialize output file
+    ofstream out("s_domain.txt");
 
     // Step1: Insert type (8-bit) to output file
     bitset<8> b_type(type[0]);
@@ -103,8 +102,29 @@ int main(int argc, char** argv){
             }
         }
     }
-        
+       
+    // Close output file and free memory
+    out.close(); 
     delete[] value;
-    return 0;
+    return true;
+}
+
+int main(int argc, char** argv){
+    // Check command line arguments
+    if (argc != 4) {
+        cerr << "Usage: " << argv[0] << " <filename> <nxdomain> <dns_server>" << endl;
+        return 1;
+    }
+
+    if(embed_message(argv[1], argv[2])){
+        cout << "embed_message() succeeded.\n";
+    }
+    else{
+        cerr << "embed_message() failed.\n";
+        return 1;
+    }
+
+	// const string filename = argv[1];
+	// char* nxdomain = argv[2];
 	
 }
