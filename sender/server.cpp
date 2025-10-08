@@ -119,7 +119,7 @@ bool transmit(string dns_server){
     string line;
     string cmd;
     while (getline(input_file, line)) {
-        cmd = "dig +tcp @" + dns_server + " " + line;
+        cmd = "dig +noall +tcp @" + dns_server + " " + line;
         DEBUG_COUT(cout << "Executing command: " << cmd << endl;);
         int ret = system(cmd.c_str());
         if (ret == -1) {
