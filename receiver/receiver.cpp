@@ -18,7 +18,7 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
-        cerr << "Usage: " << argv[0] << "<nxdomain> <dns_server>\n";
+        cerr << "Usage: " << argv[0] << " <nxdomain> <dns_server>\n";
         return 1;
     }
 
