@@ -1,4 +1,0 @@
-/* whois 104.168.151.65 | more */
-in Seattle
-username: test38
-password: 1234
