@@ -5,7 +5,7 @@
 #include <bitset>
 #include <fstream>
 #include <chrono>
-#include "../common/extension_map.h"
+#include "extension_map.h"
 using namespace std;
 
 #ifdef DEBUG

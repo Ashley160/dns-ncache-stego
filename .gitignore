@@ -1,5 +1,6 @@
 *.exe
 *.pcap
 test/*
+build/*
 sender/s_domain.txt
 receiver/receiver_file.*
