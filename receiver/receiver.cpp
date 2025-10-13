@@ -4,6 +4,7 @@
 #include <regex>
 #include <bitset>
 #include <fstream>
+#include <chrono>
 #include "../common/extension_map.h"
 using namespace std;
 
@@ -28,6 +29,9 @@ int main(int argc, char *argv[]) {
     string cmd, default_ttl, current_ttl;
     regex ttl_regex(R"(\s+(\d+)\s+IN\s+SOA\s+)");
     
+    // --- start measure ---
+    auto start = chrono::high_resolution_clock::now();
+
     // Get Negative TTL
     cmd = "dig +tcp +noall +authority @" + dns_server + " nonexistent." + nxdomain;
     FILE* ttl_fp = popen(cmd.c_str(), "r");
@@ -65,16 +69,16 @@ int main(int argc, char *argv[]) {
         pclose(fp);
         if (current_ttl != default_ttl) {
             b_type[i] = 1;
-            //cout << "b_type[" << i << "]: 1\n";
+            DEBUG_COUT(cout << "b_type[" << i << "]: 1\n";);
         }
         else {
             b_type[i] = 0;
-            //cout << "b_type[" << i << "]: 0\n";
+            DEBUG_COUT(cout << "b_type[" << i << "]: 0\n";);
         }
     }
     string ext = getTypeKey(b_type.to_ulong());
-    cout << "type: " << b_type << "(" << b_type.to_ulong() << ") "
-         << ext << "\n===================\n";
+    DEBUG_COUT(cout << "type: " << b_type << "(" << b_type.to_ulong() << ") "
+         << ext << "\n===================\n";);
             
 
     // Get Length (3-byte)
@@ -85,16 +89,8 @@ int main(int argc, char *argv[]) {
             cmd = "dig +tcp +noall +authority @" + dns_server + " " + full_domain;
             FILE* fp = popen(cmd.c_str(), "r");
             if (!fp) { cerr << "Faild to dig \n"; return 1; }
-//            bool timeout = false;
             while(fgets(ttl_buffer, sizeof(ttl_buffer), fp)) {
                 DEBUG_COUT(cout << ttl_buffer << endl;);
-                
-                /* Test for timeout */
-//                string line(ttl_buffer);
-//                if (line.find("timed out") != string::npos) {
-//                    timeout = true;
-//                    break;
-//                }
                 
                 /* Catch Negative TTL */
                 cmatch match;
@@ -107,16 +103,16 @@ int main(int argc, char *argv[]) {
             pclose(fp);
             if (current_ttl != default_ttl) {
                 b_length[(2-i)*8+j] = 1;
-                //cout << "b_length[" << 8+i*8+j << "]: 1\n";
+                DEBUG_COUT(cout << "b_length[" << 8+i*8+j << "]: 1\n";);
             }
             else {
                 b_length[(2-i)*8+j] = 0;
-                //cout << "b_length[" << 8+i*8+j << "]: 0\n";
+                DEBUG_COUT(cout << "b_length[" << 8+i*8+j << "]: 0\n";);
             }
         }
     }
-    cout << "length: " << b_length << "(" << b_length.to_ulong() << ") "
-         << "\n===================\n";
+    DEBUG_COUT(cout << "length: " << b_length << "(" << b_length.to_ulong() << ") "
+         << "\n===================\n";);
 
     // Get Value
     ofstream out("receiver_file." + ext, ios::binary);
@@ -130,17 +126,8 @@ int main(int argc, char *argv[]) {
             cmd = "dig +tcp +noall +authority @" + dns_server + " " + full_domain;
             FILE* fp = popen(cmd.c_str(), "r");
             if (!fp) { cerr << "Faild to dig \n"; return 1; }
-//            bool timeout = false;
             while(fgets(ttl_buffer, sizeof(ttl_buffer), fp)) {
                 DEBUG_COUT(cout << ttl_buffer << endl;);
-                
-                /* Test for timeout */
-//                string line(ttl_buffer);
-//                if (line.find("timed out") != string::npos) {
-//                    timeout = true;
-//                    break;
-//                }
-                
                 cmatch match;
                 if (regex_search(ttl_buffer, match, ttl_regex)) {
                     DEBUG_COUT( cout << "Negative TTL for " << full_domain << " is " << match[1] << " seconds\n";);
@@ -151,17 +138,22 @@ int main(int argc, char *argv[]) {
             pclose(fp);
             if (current_ttl != default_ttl) {
                 bits[j] = 1;
-                //cout << "bits[" << 32+i*8+j << "]: 1\n";
+                DEBUG_COUT(cout << "bits[" << 32+i*8+j << "]: 1\n";);
             }
             else {
                 bits[j] = 0;
-                //cout << "bits[" << 32+i*8+j << "]: 0\n";
+                DEBUG_COUT(cout << "bits[" << 32+i*8+j << "]: 0\n";);
             }
         }
-        cout << "value[" << i << "]: " << bits << "\n===================\n";
+        DEBUG_COUT(cout << "value[" << i << "]: " << bits << "\n===================\n";);
         char byte = static_cast<char>(bits.to_ulong());
         out.write(&byte, 1);
     }
+
+    // --- end measure ----
+    auto end = chrono::high_resolution_clock::now();
+    auto total_time = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+    cout << "total runtime: " << total_time << " ms\n";
 
     return 0;
 }
