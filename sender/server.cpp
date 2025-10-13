@@ -138,15 +138,29 @@ int main(int argc, char** argv){
         return 1;
     }
 
-    // Check embed_message() function
+    // Check embed_message() function and measure embed_message
+    clock_t start1 = clock();
     if(!embed_message(argv[1], argv[2])){
         cerr << "embed_message() failed.\n";
         return 1;
     }
+    clock_t end1 = clock();
+    double embed_time = double(end1 - start1) / CLOCKS_PER_SEC;
+    cout << "embed_message runtime: " << embed_time << " sec\n";
 
-    // Check transmit() function
+    // Check transmit() function and measure transmit
+    clock_t start2 = clock();
     if(!transmit(argv[3])){
         cerr << "transmit() failed.\n";
         return 1;
     }
+    clock_t end2 = clock();
+    double transmit_time = double(end2 - start2) / CLOCKS_PER_SEC;
+    cout << "transmit runtime: " << transmit_time << " sec\n";
+
+    // ------- total time -------
+    double total_time = embed_time + transmit_time;
+    cout << "total runtime: " << total_time << " sec\n";
+
+    return 0;
 }

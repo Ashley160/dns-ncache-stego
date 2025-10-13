@@ -1,9 +1,11 @@
 #include "extension_map.h"
 #include <string>
 #include <unordered_map>
+#include <filesystem>
 
 using std::unordered_map;
 using std::string;
+namespace fs = std::filesystem;
 
 unordered_map<string, int> ExtensionTypeMap = {
     {"txt", 1},
@@ -15,7 +17,8 @@ unordered_map<string, int> ExtensionTypeMap = {
     {"zip", 7}
 };
 
-string getExtension (const string& filename) {
+string getExtension (const string& path) {
+    string filename = fs::path(path).filename();
     size_t dot = filename.find(".");
     if (dot == string::npos) return ""; // dot == "until the end of the string" return "";
     return filename.substr(dot + 1);
@@ -31,5 +34,5 @@ string getTypeKey (const int value) {
         if (it->second == value)
             return it->first;
     }
-    return "unknow type";
+    return "unknow_type";
 }
