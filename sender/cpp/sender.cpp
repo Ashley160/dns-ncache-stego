@@ -137,7 +137,7 @@ int main(int argc, char** argv){
 
     // ------- total time -------
     auto total_time = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-    cout << "total runtime: " << total_time << " ms\n";
+    cout << "sender runtime: " << total_time << " ms";
 
     return 0;
 }

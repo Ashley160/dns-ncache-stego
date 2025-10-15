@@ -1,0 +1,6 @@
+file                 size(bytes)     sender_ms     receiver_ms
+----                 -----------     ---------     -----------
+hello.txt                     12          5787           10635
+hello.txt	                  12	      4917           13066
+square.png	                2850        810191         1839491
+hello.txt                     12          7717            8987

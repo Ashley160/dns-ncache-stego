@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
     // --- end measure ----
     auto end = chrono::high_resolution_clock::now();
     auto total_time = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-    cout << "total runtime: " << total_time << " ms\n";
+    cout << "receiver runtime: " << total_time << " ms";
 
     return 0;
 }
