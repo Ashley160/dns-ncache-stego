@@ -1,4 +1,4 @@
-#!/usr/bin
+#!/usr/bin/env python3
 import json, subprocess, os, re
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
