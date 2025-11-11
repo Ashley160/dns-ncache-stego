@@ -11,8 +11,8 @@
     "receiver_impl": "cpp",
 
     "paths": {
-        "sender_cpp": "../build/cpp/sender.exe",
-        "receiver_cpp": "../build/cpp/receiver.exe",
+        "sender_cpp": "../build/cpp/sender_v2.exe",
+        "receiver_cpp": "../build/cpp/receiver_v2.exe",
 
         "sender_py": "../sender/python/sender.py",
         "receiver_py": "../receiver/python/receiver.py",
