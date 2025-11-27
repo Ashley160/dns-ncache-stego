@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, subprocess, os, re
+import json, subprocess, os, re, sys
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
@@ -33,17 +33,24 @@ def main():
     COL_SIZE = fmt.get("col_size", 14)
     COL_SND  = fmt.get("col_snd", 14)
     COL_RCV  = fmt.get("col_rcv", 16)
-    
-    files = cfg["files"]
-    if not files:
-        print("No files in config.json: files")
-        sys.exit(1)
+
+    config_files = cfg.get("files", [])
 
     sample_dir = Path(cfg["paths"]["sample_dir"]).resolve()
     result_dir = Path(cfg["paths"]["result_dir"]).resolve()
     sender = Path(cfg["paths"]["sender_cpp"]).resolve()
     receiver = Path(cfg["paths"]["receiver_cpp"]).resolve()
     dns = cfg["dns_server"]
+
+    # python3 run_once.py           -> 用 config.json 裡面的 files
+    # python3 run_once.py filename  -> 只跑 filename
+    if len(sys.argv) == 2:
+        files = [sys.argv[1]]
+    else:
+        files = config_files
+    if not files:
+        print("No file to run (config.json: files is empty, and no filename argument).")
+        sys.exit(1)
 
     # ensure results dir
     if not result_dir.exists():
