@@ -1,18 +1,14 @@
 {
     "files": [
-        "hello.txt",
-        "a.zip",
-        "square.png",
-        "star.jpg",
-        "a.out"
+        "hello.txt"
     ],
 
     "sender_impl": "cpp",
     "receiver_impl": "cpp",
 
     "paths": {
-        "sender_cpp": "../build/cpp/sender_v2.exe",
-        "receiver_cpp": "../build/cpp/receiver_v2.exe",
+        "sender_cpp": "../build/cpp/sender_v3.exe",
+        "receiver_cpp": "../build/cpp/receiver_v3.exe",
 
         "sender_py": "../sender/python/sender.py",
         "receiver_py": "../receiver/python/receiver.py",
@@ -24,7 +20,7 @@
     "sender_args": "{FILE} {NXDOMAIN} {DNS}",
     "receiver_args": "{NXDOMAIN} {DNS}",
 
-    "dns_server": "163.22.2.1",
+    "dns_server": "163.22.22.81",
 
     "format": {
         "col_file": 18,
