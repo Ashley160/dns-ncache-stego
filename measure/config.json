@@ -1,6 +1,10 @@
 {
     "files": [
-        "hello.txt"
+        "hello.txt",
+        "a.zip",
+        "square.png",
+        "star.jpg",
+        "a.out"
     ],
 
     "sender_impl": "cpp",

@@ -60,6 +60,7 @@ def main():
     out_txt = result_dir / "measure_result.txt"
 
     for name in files:
+        print("name= ", name)
         fpath = sample_dir / name
         if not fpath.is_file():
             print(f"File not found: {fpath}")
