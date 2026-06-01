@@ -6,3 +6,4 @@ sender/s_domain.txt
 receiver/receiver_file.*
 receiver_file.*
 *.log
+measure/results/*
