@@ -14,7 +14,7 @@ DnsTcpClient::~DnsTcpClient() {
     close();
 }
 
-static void dump_hex(const std::vector<uint8_t>& b, size_t n = 32) {
+[[maybe_unused]] static void dump_hex(const std::vector<uint8_t>& b, size_t n = 32) {
     size_t lim = (b.size() < n) ? b.size() : n;
     for (size_t i = 0; i < lim; i++) {
         printf("%02X%s", b[i], ((i + 1) % 16 == 0) ? "\n" : " ");
