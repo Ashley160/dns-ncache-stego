@@ -26,6 +26,8 @@
 
     "dns_server": "163.22.22.81",
 
+    "num_threads": 8,
+
     "format": {
         "col_file": 18,
         "col_size": 14,

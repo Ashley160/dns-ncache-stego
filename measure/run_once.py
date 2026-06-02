@@ -70,7 +70,7 @@ def main():
         print(f"\n--- Running {name} with NXDOMAIN {nxdomain} ---")
 
         # 1) Sender
-        send_cmd = [str(sender), str(fpath), nxdomain, dns]
+        send_cmd = [str(sender), str(fpath), nxdomain, dns, str(cfg.get("num_threads", 4))]
         rc, so, se = run(send_cmd)
         if rc != 0:
             print(f"sender failed rc={rc}")
@@ -80,7 +80,7 @@ def main():
         sender_ms = so
 
         # 2) Receiver
-        recv_cmd = [str(receiver), nxdomain, dns]
+        recv_cmd = [str(receiver), nxdomain, dns, str(cfg.get("num_threads", 4))]
         rc, so, se = run(recv_cmd)
         if rc != 0:
             print(f"receiver failed rc={rc}")
