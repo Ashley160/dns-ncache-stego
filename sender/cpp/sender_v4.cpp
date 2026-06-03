@@ -15,11 +15,8 @@
 #include "dns_tcp_client.h"
 using namespace std;
 
-#ifdef DEBUG
-#define DEBUG_COUT(x) do { x } while(0)
-#else
-#define DEBUG_COUT(x) do {} while(0)
-#endif
+// Global accumulators for timing (microseconds)
+atomic<long long> g_dns_time_us{0};
 
 void transmit(vector<string> domains, string dns_server){
     DnsTcpClient client;
@@ -29,17 +26,27 @@ void transmit(vector<string> domains, string dns_server){
     }
     vector<uint8_t> resp;
     for (const auto& qd : domains) {
-        DEBUG_COUT(cout << "sending: " << qd << "......\n";);
+    #ifdef DEBUG
+        cout << "--- sending: " << qd << "\n";
+    #endif
+        
+        // DNS transmission timer: only the query_raw call
+        auto t_dns_start = chrono::high_resolution_clock::now();
         if (!client.query_raw(qd, resp)) {
             cerr << "query_raw failed: " << qd << "\n";
             break;
         }
+        auto t_dns_end = chrono::high_resolution_clock::now();
+        g_dns_time_us += chrono::duration_cast<chrono::microseconds>(t_dns_end - t_dns_start).count();
     }
     client.close();
 }
 
 bool send_message(string filename, string nxdomain, string dns_server, int num_threads){
-    // ---- Read input file ----
+    // Encapsulation tiemr start
+    auto t_encap_start = chrono::high_resolution_clock::now();
+    
+    //  Read input file 
     ifstream input_file(filename, ios::binary);
     if (!input_file.is_open()) {
         cerr << "Unable to open " << filename << endl;
@@ -77,6 +84,13 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     input_file.read(value, size); 
     input_file.close();
 
+    // Encapsulation timer end 
+    auto t_encap_end = chrono::high_resolution_clock::now();
+    auto encap_time = chrono::duration_cast<chrono::milliseconds>(t_encap_end - t_encap_start).count();
+
+    // Transformation timer start
+    auto t_trans_wall_start = chrono::high_resolution_clock::now();
+
     // Definition thread
     vector<thread> workers;
     workers.reserve(num_threads);
@@ -112,10 +126,10 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
             }
         }
 
-#ifdef DEBUG
-    cout << "length[" << i << "]: " << length[i]
-        << "\tb_length: " << b_length << "\n";
-#endif
+    #ifdef DEBUG
+        cout << "length[" << i << "]: " << length[i]
+            << "\tb_length: " << b_length << "\n";
+    #endif
 
         if (!domains.empty())
             workers.emplace_back(transmit, domains, dns_server);
@@ -136,10 +150,10 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
             }
         }
 
-#ifdef DEBUG
-    cout << "value[" << i << "]: " << value[i]
-        << "\tb_value: " << bits << "\n";
-#endif
+    #ifdef DEBUG
+        cout << "value[" << i << "]: " << value[i]
+            << "\tb_value: " << bits << "\n";
+    #endif
 
         if(!domains.empty()) {
             workers.emplace_back(transmit, domains, dns_server);
@@ -153,6 +167,17 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
        
     for (auto& t: workers) t.join();
     workers.clear();
+
+    // Tranformation timer end
+    auto t_trans_wall_end = chrono::high_resolution_clock::now();
+    auto trans_wall_time = chrono::duration_cast<chrono::milliseconds>(t_trans_wall_end - t_trans_wall_start).count();
+
+    // Print phase timimgs
+    cout << "\n[Timing Breakdown]\n";
+    cout << "  Encapsulation time   : " << encap_time << " ms\n";
+    cout << "  Transformation time  : " << trans_wall_time << " ms  (wall-clock)\n";
+    cout << "    └─ DNS query time  : " << g_dns_time_us.load() / 1000.0 << " ms  (acculated across threads)\n";
+
     // free memory
     delete[] value;
     return true;
@@ -180,7 +205,7 @@ int main(int argc, char** argv){
 
     // ------- total time -------
     auto total_time = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-    cout << "sender runtime: " << total_time << " ms";
+    cout << "  Sender total time    : " << total_time << " ms\n";
 
     return 0;
 }
