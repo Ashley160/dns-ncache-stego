@@ -31,7 +31,10 @@ TARGETS = \
 	$(BUILD_DIR)/sender_v2.exe \
 	$(BUILD_DIR)/sender_v2_debug.exe \
 	$(BUILD_DIR)/sender_v3.exe \
+	$(BUILD_DIR)/sender_v3_debug.exe \
 	$(BUILD_DIR)/sender_v4.exe \
+	$(BUILD_DIR)/sender_v4_debug.exe \
+	$(BUILD_DIR)/sender_v4_demo.exe \
 	$(BUILD_DIR)/receiver.exe \
 	$(BUILD_DIR)/receiver_v1.exe \
 	$(BUILD_DIR)/receiver_v1_debug.exe \
@@ -51,7 +54,7 @@ sender: \
 	$(BUILD_DIR)/sender_v1.exe \
 	$(BUILD_DIR)/sender_v2.exe \
 	$(BUILD_DIR)/sender_v3.exe \
-	$(BUILD_DIR)/sender_v4.exe
+	$(BUILD_DIR)/sender_v4.exe 
 
 receiver: \
 	$(BUILD_DIR)/receiver_v1.exe \
@@ -95,9 +98,13 @@ $(BUILD_DIR)/sender_v4.exe: $(SENDER_DIR)/sender_v4.cpp $(COMMON_OBJS)
 $(BUILD_DIR)/sender_v4_debug.exe: $(SENDER_DIR)/sender_v4.cpp $(COMMON_OBJS)
 	$(CXX) $(CXXFLAGS) $(DEBUG_FLAGS) -I$(COMMON_INC) $^ -o $@
 
+$(BUILD_DIR)/sender_v4_demo.exe: $(SENDER_DIR)/sender_v4_demo.cpp $(COMMON_OBJS)
+	$(CXX) $(CXXFLAGS) -I$(COMMON_INC) $^ -o $@
+
 # sender.exe -> 指向最新版本 (v4)
 $(BUILD_DIR)/sender.exe: $(BUILD_DIR)/sender_v4.exe
 	cp $< $@
+
 
 # ============================================================
 # Receiver targets
