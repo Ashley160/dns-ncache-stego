@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <iomanip>
 
 #include "extension_map.h"
 #include "dns_tcp_client.h"
@@ -173,7 +174,8 @@ int main(int argc, char *argv[]) {
     auto total_end = chrono::high_resolution_clock::now();
     auto total_time = chrono::duration_cast<chrono::milliseconds>(total_end - total_start).count();
 
-    cout << "[Timing Breakdown]\n";
+    cout << fixed << setprecision(2);
+    cout << "\n[Timing Breakdown]\n";
     cout << "  Negativity Detection time : " << neg_time  << " ms\n";
     cout << "    └─ DNS query time       : " << (g_dns_time_us.load() / 1000.0) 
             << " ms (accumulated across threads)\n";
