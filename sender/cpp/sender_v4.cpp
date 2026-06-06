@@ -10,6 +10,7 @@
 #include <thread>
 #include <vector>
 #include <atomic>
+#include <iomanip>
 
 #include "extension_map.h"
 #include "dns_tcp_client.h"
@@ -173,6 +174,7 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     auto trans_wall_time = chrono::duration_cast<chrono::milliseconds>(t_trans_wall_end - t_trans_wall_start).count();
 
     // Print phase timimgs
+    cout << fixed << setprecision(2);
     cout << "\n[Timing Breakdown]\n";
     cout << "  Encapsulation time   : " << encap_time << " ms\n";
     cout << "  Transformation time  : " << trans_wall_time << " ms  (wall-clock)\n";
