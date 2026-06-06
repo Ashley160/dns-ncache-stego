@@ -1,11 +1,12 @@
 #!/usr/bini/env python3
-import argparse, subprocess, sys, time
+import argparse, subprocess, sys
 from datetime import datetime
 from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser(description="Run run_once.py multiple rounds.")
-    parser.add_argument("-r", "--rounds", type=int, default=3, dest="rounds", help="number of rounds to run (default: 3)")
+    parser.add_argument("-r", "--rounds", type=int, default=3, 
+                        dest="rounds", help="number of rounds to run (default: 3)")
     args = parser.parse_args()
 
     measure_dir = Path(__file__).parent.resolve()
@@ -19,7 +20,9 @@ def main():
 
     for i in range(1, args.rounds + 1):
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"\n=== Round {i}/{args.rounds} @ {ts} ===")
+        print(f"\n{'='*60}")
+        print(f"  Round {i}/{args.rounds}  @  {ts}")
+        print(f"{'='*60}")
 
         proc = subprocess.run([py, str(run_once)])
         if proc.returncode != 0:
@@ -27,7 +30,9 @@ def main():
             sys.exit(1)
 
     
-    print("\nAll rounds completed.")
+    print(f"\n{'='*60}")
+    print(f"  All {args.rounds} rounds completed.")
+    print(f"{'='*60}")
 
 
 if __name__ == "__main__":
