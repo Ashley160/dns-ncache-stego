@@ -27,7 +27,6 @@ TARGETS = \
 	$(BUILD_DIR)/sender.exe \
 	$(BUILD_DIR)/sender_v1.exe \
 	$(BUILD_DIR)/sender_v1_debug.exe \
-	$(BUILD_DIR)/sender_v1_hex_debug.exe \
 	$(BUILD_DIR)/sender_v2.exe \
 	$(BUILD_DIR)/sender_v2_debug.exe \
 	$(BUILD_DIR)/sender_v3.exe \
@@ -41,7 +40,9 @@ TARGETS = \
 	$(BUILD_DIR)/receiver_v2.exe \
 	$(BUILD_DIR)/receiver_v2_debug.exe \
 	$(BUILD_DIR)/receiver_v3.exe \
-	$(BUILD_DIR)/receiver_v4.exe
+    $(BUILD_DIR)/receiver_v3_debug.exe \
+	$(BUILD_DIR)/receiver_v4.exe \
+    $(BUILD_DIR)/receiver_v4_debug.exe
 
 # ============================================================
 # Default target
