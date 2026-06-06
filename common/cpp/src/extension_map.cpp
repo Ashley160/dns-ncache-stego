@@ -14,7 +14,10 @@ unordered_map<string, int> ExtensionTypeMap = {
     {"mp3", 4},
     {"mp4", 5},
     {"out", 6},
-    {"zip", 7}
+    {"zip", 7},
+    {"json", 8},
+    {"csv", 9},
+    {"html", 10}
 };
 
 string getExtension (const string& path) {
