@@ -24,9 +24,9 @@
     "sender_args": "{FILE} {NXDOMAIN} {DNS}",
     "receiver_args": "{NXDOMAIN} {DNS}",
 
-    "dns_server": "163.22.22.81",
+    "dns_server": "163.22.2.1",
 
-    "num_threads": 8,
+    "num_threads": [1, 2, 4, 8, 16, 32],
 
     "format": {
         "col_file": 18,
