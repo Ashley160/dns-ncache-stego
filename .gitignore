@@ -7,3 +7,4 @@ receiver/receiver_file.*
 receiver_file.*
 *.log
 measure/results/*
+measure/nxdomain_ttl_results.tsv
