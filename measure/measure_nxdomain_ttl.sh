@@ -6,7 +6,7 @@
 # Usage: ./measure_nxdomain_ttl.sh [resolver]
 # ============================================================
 
-RESOLVER="${1:-163.22.22.81}"
+RESOLVER="${1:-163.22.2.1}"
 LABEL="2026invalid"
 OUTPUT="nxdomain_ttl_results.tsv"
 
@@ -86,8 +86,9 @@ query "${LABEL}.edu.tw."                  "3層 SLD"
 # 層級 4：Sub-SLD
 # ============================================================
 echo -e "\n${YELLOW}=== 層級 4: Sub-SLD ===${NC}"
-query "${LABEL}.csie.ncnu.edu.tw."        "4層 Sub-SLD"
-query "${LABEL}.cs.nthu.edu.tw."          "4層 Sub-SLD"
+query "${LABEL}.ncnu.edu.tw."        "4層 Sub-SLD"
+query "${LABEL}.nthu.edu.tw."          "4層 Sub-SLD"
+query "${LABEL}.ntu.edu.tw."          "4層 Sub-SLD"
 
 # ============================================================
 # 結果摘要
