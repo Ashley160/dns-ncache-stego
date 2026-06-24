@@ -220,7 +220,7 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     cout << "\n[Timing Breakdown]\n";
     cout << "  Encapsulation time   : " << encap_time << " ms\n";
     cout << "  Transformation time  : " << trans_wall_time << " ms  (wall-clock)\n";
-    cout << "    └─ DNS query time  : " << g_dns_time_us.load() / 1000.0 << " ms  (acculated across threads)\n";
+    cout << "    └─ DNS query time  : " << g_dns_time_us.load() / 1000.0 << " ms  (accumulated across threads)\n";
 
     // free memory
     delete[] value;
