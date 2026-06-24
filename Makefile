@@ -42,7 +42,8 @@ TARGETS = \
 	$(BUILD_DIR)/receiver_v3.exe \
     $(BUILD_DIR)/receiver_v3_debug.exe \
 	$(BUILD_DIR)/receiver_v4.exe \
-    $(BUILD_DIR)/receiver_v4_debug.exe
+    $(BUILD_DIR)/receiver_v4_debug.exe \
+	$(BUILD_DIR)/receiver_v4_demo.exe 
 
 # ============================================================
 # Default target
@@ -133,6 +134,9 @@ $(BUILD_DIR)/receiver_v4.exe: $(RECEIVER_DIR)/receiver_v4.cpp $(COMMON_OBJS)
 
 $(BUILD_DIR)/receiver_v4_debug.exe: $(RECEIVER_DIR)/receiver_v4.cpp $(COMMON_OBJS)
 	$(CXX) $(CXXFLAGS) $(DEBUG_FLAGS) -I$(COMMON_INC) $^ -o $@
+
+$(BUILD_DIR)/receiver_v4_demo.exe: $(RECEIVER_DIR)/receiver_v4_demo.cpp $(COMMON_OBJS)
+	$(CXX) $(CXXFLAGS) -I$(COMMON_INC) $^ -o $@
 
 # receiver.exe -> 指向最新版本 (v4)
 $(BUILD_DIR)/receiver.exe: $(BUILD_DIR)/receiver_v4.exe
