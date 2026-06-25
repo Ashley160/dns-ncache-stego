@@ -14,17 +14,25 @@
 
 #include "extension_map.h"
 #include "dns_tcp_client.h"
+#include "dns_https_client.h"
 using namespace std;
 
 // Global accumulators for timing (microseconds)
 atomic<long long> g_dns_time_us{0};
 
-void transmit(vector<string> domains, string dns_server){
-    DnsTcpClient client;
-    if (!client.connect_to(dns_server, "53")) {
-        cerr << "connect failed\n";
-        return;
+void transmit(vector<string> domains, string dns_server, bool use_doh){
+    DnsTcpClient tcp_client;
+
+    string doh_url = "https://" + dns_server + "/dns-query";
+    DnsHttpsClient doh_client(doh_url);
+
+    if (!use_doh){
+        if (!tcp_client.connect_to(dns_server, "53")) {
+            cerr << "connect failed\n";
+            return;
+        }
     }
+
     vector<uint8_t> resp;
     for (const auto& qd : domains) {
     #ifdef DEBUG
@@ -33,17 +41,23 @@ void transmit(vector<string> domains, string dns_server){
         
         // DNS transmission timer: only the query_raw call
         auto t_dns_start = chrono::high_resolution_clock::now();
-        if (!client.query_raw(qd, resp)) {
+        
+        bool ok = use_doh ? doh_client.query_raw(qd, resp)
+                          : tcp_client.query_raw(qd, resp);
+        if (!ok) {
             cerr << "query_raw failed: " << qd << "\n";
             break;
         }
+        
         auto t_dns_end = chrono::high_resolution_clock::now();
         g_dns_time_us += chrono::duration_cast<chrono::microseconds>(t_dns_end - t_dns_start).count();
     }
-    client.close();
+    
+    if (!use_doh)
+        tcp_client.close();
 }
 
-bool send_message(string filename, string nxdomain, string dns_server, int num_threads){
+bool send_message(string filename, string nxdomain, string dns_server, int num_threads, bool use_doh){
     // Encapsulation tiemr start
     auto t_encap_start = chrono::high_resolution_clock::now();
     
@@ -110,7 +124,7 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
 #endif
 
     if (!type_domains.empty())
-        workers.emplace_back(transmit, type_domains, dns_server);
+        workers.emplace_back(transmit, type_domains, dns_server, use_doh);
         
     for (auto& t: workers) t.join();
     workers.clear();
@@ -133,7 +147,7 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     #endif
 
         if (!domains.empty())
-            workers.emplace_back(transmit, domains, dns_server);
+            workers.emplace_back(transmit, domains, dns_server, use_doh);
     }
 
     for(auto& t: workers) t.join();
@@ -157,7 +171,7 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     #endif
 
         if(!domains.empty()) {
-            workers.emplace_back(transmit, domains, dns_server);
+            workers.emplace_back(transmit, domains, dns_server, use_doh);
             
             if ((int)workers.size() == num_threads) {
                 for (auto& t: workers) t.join();
@@ -178,7 +192,7 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     cout << "\n[Timing Breakdown]\n";
     cout << "  Encapsulation time   : " << encap_time << " ms\n";
     cout << "  Transformation time  : " << trans_wall_time << " ms  (wall-clock)\n";
-    cout << "    └─ DNS query time  : " << g_dns_time_us.load() / 1000.0 << " ms  (acculated across threads)\n";
+    cout << "    └─ DNS query time  : " << g_dns_time_us.load() / 1000.0 << " ms  (accumulated across threads)\n";
 
     // free memory
     delete[] value;
@@ -188,16 +202,22 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
 
 int main(int argc, char** argv){
     // Check command line arguments
-    if (argc != 5) {
-        cerr << "Usage: " << argv[0] << " <filename> <nxdomain> <dns_server> <num_threads>" << endl;
+    if (argc < 5 || argc > 6) {
+        cerr << "Usage: " << argv[0] << " <filename> <nxdomain> <dns_server> <num_threads> [+doh]" << endl;
         return 1;
     }
 
+    bool use_doh = (argc == 6 && string(argv[5]) == "+doh");
     int num_threads = atoi(argv[4]);
+
+    if (use_doh)
+        cout << "[Mode] DNS over HTTPS (DoH)\n";
+    else
+        cout << "[Mode] DNS over TCP\n";
 
     // ------ start measure ------
     auto start = chrono::high_resolution_clock::now();
-    if (!send_message(argv[1], argv[2], argv[3], num_threads)) {
+    if (!send_message(argv[1], argv[2], argv[3], num_threads, use_doh)) {
         cerr << "send message() failed.\n";
         return 1;
     }

@@ -62,7 +62,7 @@ std::vector<uint8_t> DnsHttpsClient::build_dns_query(const std::string& qname, u
         if (len > 63) return {};
 
         msg.push_back(static_cast<uint8_t>(len));
-        for(size_t i = 1; i < len; ++i)
+        for(size_t i = 0; i < len; ++i)
             msg.push_back(static_cast<uint8_t>(qname[start + i]));
 
         if (dot == std::string::npos) break;
@@ -122,6 +122,15 @@ bool DnsHttpsClient::query_raw(const std::string& qname, std::vector<uint8_t>& o
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,   curl_write_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA,       &out_resp);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT,         5L);// 5L: 5 秒timeout
+
+    // 因為目前我的 doh server 沒有 SSL 憑證
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+
+//    fprintf(stderr, "[DoH] sending %zu bytes\n", pkt.size());
+//    for (size_t i = 0; i < pkt.size() && i < 32; i++)
+//        fprintf(stderr, "%02X ", pkt[i]);
+//    fprintf(stderr, "\n");
 
     // curl_easy_perform() 真正送出 request
     CURLcode res = curl_easy_perform(curl);
