@@ -121,7 +121,7 @@ bool DnsHttpsClient::query_raw(const std::string& qname, std::vector<uint8_t>& o
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,   static_cast<long>(pkt.size()));
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,   curl_write_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA,       &out_resp);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT,         5L);// 5L: 5 秒timeout
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT,         30L);// 30L: 30 秒timeout
 
     // 因為目前我的 doh server 沒有 SSL 憑證
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
