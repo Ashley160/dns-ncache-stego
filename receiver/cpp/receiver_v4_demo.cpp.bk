@@ -11,6 +11,7 @@
 
 #include "extension_map.h"
 #include "dns_tcp_client.h"
+#include "dns_https_client.h"
 using namespace std;
 
 // Global accumulators for timing (microseconds)
@@ -22,13 +23,18 @@ void receive_byte(
     const string&   nxdomain,
     const string&   dns_server,
     uint32_t        default_ttl,
-    vector<char>&   result)
+    vector<char>&   result,
+    bool            use_doh)
 {
-    DnsTcpClient client;
-    if (!client.connect_to(dns_server, "53")) {
-        cerr << "connect failed (byte " << byte_index << ")\n";
-        result[byte_index] = 0;
-        return;
+    DnsTcpClient tcp_client;
+    DnsHttpsClient doh_client("https://" + dns_server + "/dns-query");
+    
+    if (!use_doh) {
+        if (!tcp_client.connect_to(dns_server, "53")) {
+            cerr << "connect failed (byte " << byte_index << ")\n";
+            result[byte_index] = 0;
+            return;
+        }
     }
 
     bitset<8> bits;
@@ -41,28 +47,40 @@ void receive_byte(
 
         // DNS tranmission time
         auto dns_start = chrono::high_resolution_clock::now();
-        if (!client.query_soa_ttl(full_domain, current_ttl)) {
+
+        bool ok = use_doh ? doh_client.query_soa_ttl(full_domain, current_ttl)
+                          : tcp_client.query_soa_ttl(full_domain, current_ttl);
+        if (!ok) {
             cerr << "Failed to get SOA TTL for " << full_domain << "\n";
             return;
         }
+
         auto dns_end = chrono::high_resolution_clock::now();
         g_dns_time_us += chrono::duration_cast<chrono::microseconds>(dns_end - dns_start).count();
+        
         bits[i] = (current_ttl != default_ttl) ? 1 : 0;
     }
 #ifdef DEBUG
     cout << "value[" << byte_index << "]: " << bits << "\n=============\n";
 #endif
     result[byte_index] = static_cast<char>(bits.to_ulong());
-    client.close();
+    if (!use_doh)    
+        tcp_client.close();
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 4) {
-        cerr << "Usage: " << argv[0] << " <nxdomain> <dns_server> <num_threads>\n";
+    if (argc < 4 || argc > 5) {
+        cerr << "Usage: " << argv[0] << " <nxdomain> <dns_server> <num_threads> [+doh]\n";
         return 1;
     }
     string nxdomain = argv[1], dns_server = argv[2];
     int num_threads = atoi(argv[3]);
+    bool use_doh = (argc == 5 && string(argv[4]) == "+doh");
+
+    if (use_doh)
+        cout << "[Mode] DNS over HTTPS (DoH)\n";
+    else
+        cout << "[Mode] DNS over TCP\n";
     
     // total timing start
     auto total_start = chrono::high_resolution_clock::now();
@@ -71,17 +89,23 @@ int main(int argc, char *argv[]) {
     auto neg_start = chrono::high_resolution_clock::now();
 
     // Connect once
-    DnsTcpClient client;
-    if (!client.connect_to(dns_server, "53")) {
-        cerr << "Failed to connec to DNS Server\n";
-        return 1;
+    DnsTcpClient tcp_client;
+    DnsHttpsClient doh_client("https://" + dns_server + "/dns-query");
+
+    if (!use_doh) {
+        if (!tcp_client.connect_to(dns_server, "53")) {
+            cerr << "Failed to connec to DNS Server\n";
+            return 1;
+        }
     }
 
     // Get default Negative TTL
     uint32_t default_ttl = 0;
     string base_domain = "nonexistent." + nxdomain;
     auto dns_default_ttl_start = chrono::high_resolution_clock::now();
-    if (!client.query_soa_ttl(base_domain, default_ttl)) {
+    bool ok = use_doh ? doh_client.query_soa_ttl(base_domain, default_ttl)
+                      : tcp_client.query_soa_ttl(base_domain, default_ttl);
+    if (!ok) {
         cerr << "Failed to get Negative TTL (SOA) for " << base_domain << "\n";
         return 1;
     }
@@ -98,7 +122,9 @@ int main(int argc, char *argv[]) {
         uint32_t current_ttl = 0;
         string full_domain = to_string(i) + "." + nxdomain;
         auto dns_type_start = chrono::high_resolution_clock::now();
-        if (!client.query_soa_ttl(full_domain, current_ttl)) {
+        bool ok = use_doh ? doh_client.query_soa_ttl(full_domain, current_ttl)
+                          : tcp_client.query_soa_ttl(full_domain, current_ttl);
+        if (!ok) {
             cerr << "Failed to get Negative TTL (SOA) for " << full_domain << "\n";
             return 1;
         }
@@ -107,7 +133,8 @@ int main(int argc, char *argv[]) {
         b_type[i] = (current_ttl != default_ttl) ? 1 : 0;
     }
     string ext = getTypeKey(b_type.to_ulong());
-    client.close();
+    if (!use_doh)
+        tcp_client.close();
 #ifdef DEBUG
     cout << "type: " << b_type << "(" << b_type.to_ulong() << ") "
         << ext << "\n===============\n";
@@ -121,7 +148,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 3; ++i) {
         length_workers.emplace_back(receive_byte, i, 8 + i * 8,
                             cref(nxdomain), cref(dns_server),
-                            default_ttl, ref(length_result));
+                            default_ttl, ref(length_result), use_doh);
     }
     for (auto& t: length_workers) t.join();
     length_workers.clear();
@@ -177,6 +204,7 @@ int main(int argc, char *argv[]) {
     auto t_progress_start = chrono::high_resolution_clock::now();
     size_t bytes_recv = 0;
 
+
     // Get Value
     vector<char> result(size, 0);
     vector<thread> workers;
@@ -186,7 +214,7 @@ int main(int argc, char *argv[]) {
         int bit_offset = 32 + i * 8;
         workers.emplace_back(receive_byte, i, bit_offset,
                             cref(nxdomain), cref(dns_server),
-                            default_ttl, ref(result));
+                            default_ttl, ref(result), use_doh);
 
         if ((int)workers.size() == num_threads || i == size - 1) {
             for (auto& t: workers) t.join();
@@ -197,6 +225,7 @@ int main(int argc, char *argv[]) {
     }
     print_progress((size_t)size, (size_t)size, 3, 3, "value", t_progress_start);
     fprintf(stderr, "\n\n");
+
     // Negativity Detection timer end
     auto neg_end = chrono::high_resolution_clock::now();
     auto neg_time = chrono::duration_cast<chrono::milliseconds>(neg_end - neg_start).count();

@@ -99,6 +99,9 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     input_file.read(value, size); 
     input_file.close();
 
+    // declaration label_buf for hex
+    char buf[63]; //label limit is 63 bytes
+
     // Encapsulation timer end 
     auto t_encap_end = chrono::high_resolution_clock::now();
     auto encap_time = chrono::duration_cast<chrono::milliseconds>(t_encap_end - t_encap_start).count();
@@ -150,7 +153,8 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
     vector<string> type_domains;
     for (size_t i = 0; i < b_type.size(); i++) {
         if (b_type[i] == 1) {
-            type_domains.push_back(to_string(i) + "." + nxdomain);         
+            snprintf(buf, sizeof(buf), "%x", int(i));
+            type_domains.push_back(string(buf) + "." + nxdomain);         
         }
     }
 
@@ -173,7 +177,8 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
         for (size_t j = 0; j < b_length.size(); j++) {
             if (b_length[j] == 1) {
                 int index = 8 + i*8 + j;
-                domains.push_back(to_string(index) + "." + nxdomain);
+                snprintf(buf, sizeof(buf), "%x", int(index));
+                domains.push_back(string(buf) + "." + nxdomain);
             }
         }
 
@@ -201,7 +206,8 @@ bool send_message(string filename, string nxdomain, string dns_server, int num_t
         for (size_t j = 0; j < bits.size(); j++) {
             if (bits[j] == 1) {
                 int index = 32 + i*8 + j;
-                domains.push_back(to_string(index) + "." + nxdomain);
+                snprintf(buf, sizeof(buf), "%x", int(index));
+                domains.push_back(string(buf) + "." + nxdomain);
             }
         }
 
