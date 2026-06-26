@@ -37,13 +37,17 @@ void receive_byte(
         }
     }
 
+    // declaration label_buf for hex
+    char buf[63]; //label limit is 63 bytes
+
     bitset<8> bits;
     for (int i = 0; i < 8; ++i) {
     #ifdef DEBUG
         cout << "bits[" << byte_offset+i << "]: " << bits[i] << "\n";
     #endif
         uint32_t current_ttl = 0;
-        string full_domain = to_string(byte_offset+i) + "." + nxdomain;
+        snprintf(buf, sizeof(buf), "%x", int(byte_offset + i));
+        string full_domain = string(buf) + "." + nxdomain;
 
         // DNS tranmission time
         auto dns_start = chrono::high_resolution_clock::now();
@@ -116,11 +120,15 @@ int main(int argc, char *argv[]) {
         << " is " << default_ttl << " seconds\n";
 #endif
 
+    // declaration label_buf for hex
+    char buf[63]; //label limit is 63 bytes
+
     // Get Type (1-byte)
     bitset<8> b_type;
     for (size_t i=0; i<8; i++) {
         uint32_t current_ttl = 0;
-        string full_domain = to_string(i) + "." + nxdomain;
+        snprintf(buf, sizeof(buf), "%x", int(i));
+        string full_domain = string(buf) + "." + nxdomain;
         auto dns_type_start = chrono::high_resolution_clock::now();
         bool ok = use_doh ? doh_client.query_soa_ttl(full_domain, current_ttl)
                           : tcp_client.query_soa_ttl(full_domain, current_ttl);
